@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Perfect - Alignment Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #333;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #4CAF50;
+        }
+
+        .header h1 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #bbb;
+            font-size: 1.1rem;
+        }
+
+        .game-container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .game-area {
+            flex: 2;
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .canvas {
+            width: 100%;
+            height: 500px;
+            background: #1a1a1a;
+            border: 2px solid #555;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rectangle {
+            position: absolute;
+            border: 2px solid;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .target-rect {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: #ff6b6b;
+            z-index: 1;
+        }
+
+        .movable-rect {
+            background: rgba(74, 175, 79, 0.3);
+            border-color: #4CAF50;
+            z-index: 2;
+        }
+
+        .movable-rect.checking {
+            background: rgba(74, 175, 79, 0.7);
+            border-color: #4CAF50;
+            border-width: 3px;
+        }
+
+        .controls {
+            flex: 1;
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #4CAF50;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .control-group input {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 2px solid #555;
+            border-radius: 5px;
+            color: #fff;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 16px;
+        }
+
+        .control-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .secondary-btn {
+            background: linear-gradient(45deg, #666, #555);
+        }
+
+        .secondary-btn:hover {
+            box-shadow: 0 5px 15px rgba(102, 102, 102, 0.3);
+        }
+
+        .score-display {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .score-number {
+            font-size: 3rem;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .info-panel {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: #bbb;
+        }
+
+        .info-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .perfect-alignment {
+            animation: perfectGlow 1s ease-in-out;
+        }
+
+        @keyframes perfectGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.8); }
+            50% { box-shadow: 0 0 40px rgba(76, 175, 80, 1); }
+        }
+
+        .feedback {
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .feedback.perfect {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .feedback.good {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .feedback.needs-work {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Pixel Perfect</h1>
+        <div class="subtitle">The Ultimate Frontend Developer Alignment Challenge</div>
+    </div>
+
+    <div class="game-container">
+        <div class="game-area">
+            <div class="canvas" id="canvas">
+                <div class="rectangle target-rect" id="targetRect"></div>
+                <div class="rectangle movable-rect" id="movableRect"></div>
+            </div>
+            <div id="feedback" class="feedback" style="display: none;"></div>
+        </div>
+
+        <div class="controls">
+            <div class="score-display">
+                <div class="score-number" id="score">0</div>
+                <div>Accuracy Score</div>
+            </div>
+
+            <div class="info-panel">
+                <div class="info-row">
+                    <span class="info-label">Your Task:</span>
+                    <span class="info-value">Align Green Rectangle</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Round:</span>
+                    <span class="info-value" id="roundInfo">1</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="xInput">X Position (px)</label>
+                <input type="number" id="xInput" value="0" min="0">
+            </div>
+
+            <div class="control-group">
+                <label for="yInput">Y Position (px)</label>
+                <input type="number" id="yInput" value="0" min="0">
+            </div>
+
+            <div class="control-group">
+                <label for="widthInput">Width (px)</label>
+                <input type="number" id="widthInput" value="100" min="1">
+            </div>
+
+            <div class="control-group">
+                <label for="heightInput">Height (px)</label>
+                <input type="number" id="heightInput" value="100" min="1">
+            </div>
+
+            <button class="button" onclick="checkAlignment()">🎯 Check Alignment</button>
+            <button class="button secondary-btn" onclick="newRound()">🔄 New Challenge</button>
+        </div>
+    </div>
+
+    <script>
+        let currentRound = 1;
+        let targetPosition = {};
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+
+        function initGame() {
+            const canvas = document.getElementById('canvas');
+            canvasWidth = canvas.clientWidth - 4; // Account for border
+            canvasHeight = canvas.clientHeight - 4;
+            newRound();
+            setupInputListeners();
+        }
+
+        function setupInputListeners() {
+            const inputs = ['xInput', 'yInput', 'widthInput', 'heightInput'];
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        checkAlignment();
+                    }
+                });
+            });
+        }
+
+        function generateRandomTarget() {
+            const maxWidth = canvasWidth * 0.4;
+            const maxHeight = canvasHeight * 0.4;
+            
+            const width = Math.floor(Math.random() * (maxWidth - 50)) + 50;
+            const height = Math.floor(Math.random() * (maxHeight - 30)) + 30;
+            const x = Math.floor(Math.random() * (canvasWidth - width));
+            const y = Math.floor(Math.random() * (canvasHeight - height));
+
+            return { x, y, width, height };
+        }
+
+        function newRound() {
+            targetPosition = generateRandomTarget();
+            
+            const targetRect = document.getElementById('targetRect');
+            targetRect.style.left = targetPosition.x + 'px';
+            targetRect.style.top = targetPosition.y + 'px';
+            targetRect.style.width = targetPosition.width + 'px';
+            targetRect.style.height = targetPosition.height + 'px';
+
+            // Set random start position for inputs and show starting rectangle
+            const startPosition = generateRandomTarget();
+            document.getElementById('xInput').value = startPosition.x;
+            document.getElementById('yInput').value = startPosition.y;
+            document.getElementById('widthInput').value = startPosition.width;
+            document.getElementById('heightInput').value = startPosition.height;
+            
+            // Show the movable rectangle at starting position
+            const movableRect = document.getElementById('movableRect');
+            movableRect.style.left = startPosition.x + 'px';
+            movableRect.style.top = startPosition.y + 'px';
+            movableRect.style.width = startPosition.width + 'px';
+            movableRect.style.height = startPosition.height + 'px';
+            movableRect.classList.remove('checking');
+            
+            document.getElementById('roundInfo').textContent = currentRound;
+            
+            // Hide previous feedback
+            const feedback = document.getElementById('feedback');
+            feedback.style.display = 'none';
+            
+            // Remove any previous animations
+            movableRect.classList.remove('perfect-alignment');
+        }
+
+        function updateMovableRect() {
+            const x = parseInt(document.getElementById('xInput').value) || 0;
+            const y = parseInt(document.getElementById('yInput').value) || 0;
+            const width = parseInt(document.getElementById('widthInput').value) || 100;
+            const height = parseInt(document.getElementById('heightInput').value) || 100;
+
+            const movableRect = document.getElementById('movableRect');
+            movableRect.style.left = x + 'px';
+            movableRect.style.top = y + 'px';
+            movableRect.style.width = width + 'px';
+            movableRect.style.height = height + 'px';
+        }
+
+        function calculateScore() {
+            const userX = parseInt(document.getElementById('xInput').value) || 0;
+            const userY = parseInt(document.getElementById('yInput').value) || 0;
+            const userWidth = parseInt(document.getElementById('widthInput').value) || 100;
+            const userHeight = parseInt(document.getElementById('heightInput').value) || 100;
+
+            const xDiff = Math.abs(userX - targetPosition.x);
+            const yDiff = Math.abs(userY - targetPosition.y);
+            const widthDiff = Math.abs(userWidth - targetPosition.width);
+            const heightDiff = Math.abs(userHeight - targetPosition.height);
+
+            const totalDiff = xDiff + yDiff + widthDiff + heightDiff;
+            const maxPossibleDiff = canvasWidth + canvasHeight; // Rough estimate for scaling
+            
+            let score = Math.max(0, 100 - (totalDiff / maxPossibleDiff) * 100);
+            
+            // Perfect alignment bonus
+            if (totalDiff === 0) {
+                score = 100;
+            }
+
+            return Math.round(score);
+        }
+
+        function checkAlignment() {
+            // Update the rectangle position based on current input values
+            const x = parseInt(document.getElementById('xInput').value) || 0;
+            const y = parseInt(document.getElementById('yInput').value) || 0;
+            const width = parseInt(document.getElementById('widthInput').value) || 100;
+            const height = parseInt(document.getElementById('heightInput').value) || 100;
+
+            const movableRect = document.getElementById('movableRect');
+            movableRect.style.left = x + 'px';
+            movableRect.style.top = y + 'px';
+            movableRect.style.width = width + 'px';
+            movableRect.style.height = height + 'px';
+            
+            // Add visual emphasis to show this is the checking state
+            movableRect.classList.add('checking');
+
+            const score = calculateScore();
+            document.getElementById('score').textContent = score;
+
+            const feedback = document.getElementById('feedback');
+            
+            feedback.style.display = 'block';
+            
+            if (score === 100) {
+                feedback.textContent = '🎉 PIXEL PERFECT! Amazing alignment!';
+                feedback.className = 'feedback perfect';
+                movableRect.classList.add('perfect-alignment');
+            } else if (score >= 90) {
+                feedback.textContent = '🌟 Excellent! Almost pixel perfect!';
+                feedback.className = 'feedback perfect';
+            } else if (score >= 70) {
+                feedback.textContent = '👍 Good job! Getting close!';
+                feedback.className = 'feedback good';
+            } else if (score >= 50) {
+                feedback.textContent = '📐 Not bad, but needs refinement!';
+                feedback.className = 'feedback good';
+            } else {
+                feedback.textContent = '🎯 Keep trying! Focus on positioning!';
+                feedback.className = 'feedback needs-work';
+            }
+
+            // Auto-advance to next round after perfect alignment
+            if (score === 100) {
+                setTimeout(() => {
+                    currentRound++;
+                    newRound();
+                }, 2000);
+            }
+        }
+
+        // Initialize the game when the page loads
+        window.addEventListener('load', () => {
+            setTimeout(initGame, 100); // Small delay to ensure canvas is properly sized
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('canvas');
+            canvasWidth = canvas.clientWidth - 4;
+            canvasHeight = canvas.clientHeight - 4;
+        });
+    </script>
+</body>
+</html>
