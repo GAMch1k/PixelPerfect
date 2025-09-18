@@ -454,6 +454,7 @@
         let timerInterval = null;
         let currentScore = 0;
         let currentTime = 0;
+        let hasSubmitted = false;
 
         function initGame() {
             const canvas = document.getElementById('canvas');
@@ -520,6 +521,10 @@
             // Remove any previous animations
             movableRect.classList.remove('perfect-alignment');
             
+            // Reset submission state and enable inputs
+            hasSubmitted = false;
+            enableInputs();
+            
             // Start timer
             startTimer();
         }
@@ -562,8 +567,17 @@
         }
 
         function checkAlignment() {
+            if (hasSubmitted) {
+                return; // Prevent multiple submissions
+            }
+            
+            hasSubmitted = true;
+            
             // Stop timer
             stopTimer();
+            
+            // Disable inputs after submission
+            disableInputs();
             
             // Update the rectangle position based on current input values
             const x = parseInt(document.getElementById('xInput').value) || 0;
@@ -730,6 +744,32 @@
                     <span class="leaderboard-time">${entry.time.toFixed(1)}s</span>
                 </div>
             `).join('');
+        }
+
+        function enableInputs() {
+            const inputs = ['xInput', 'yInput', 'widthInput', 'heightInput'];
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.disabled = false;
+                input.style.opacity = '1';
+            });
+            
+            const checkButton = document.querySelector('button[onclick="checkAlignment()"]');
+            checkButton.disabled = false;
+            checkButton.style.opacity = '1';
+        }
+
+        function disableInputs() {
+            const inputs = ['xInput', 'yInput', 'widthInput', 'heightInput'];
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.disabled = true;
+                input.style.opacity = '0.5';
+            });
+            
+            const checkButton = document.querySelector('button[onclick="checkAlignment()"]');
+            checkButton.disabled = true;
+            checkButton.style.opacity = '0.5';
         }
 
         // Handle Enter key in name modal
