@@ -623,11 +623,13 @@
             }
 
             // Check if this is a high score
-            if (isHighScore(score, currentTime)) {
-                setTimeout(() => {
-                    showNameModal(score, currentTime);
-                }, 1000);
-            }
+            isHighScore(score, currentTime).then(isHigh => {
+                if (isHigh) {
+                    setTimeout(() => {
+                        showNameModal(score, currentTime);
+                    }, 1000);
+                }
+            });
 
             // Auto-advance to next round after perfect alignment
             if (score === 100) {
@@ -655,13 +657,14 @@
             document.getElementById('timer').textContent = elapsed.toFixed(1) + 's';
         }
 
-        function getLeaderboard() {
-            const stored = localStorage.getItem('pixelPerfectLeaderboard');
-            return stored ? JSON.parse(stored) : [];
-        }
-
-        function saveLeaderboard(leaderboard) {
-            localStorage.setItem('pixelPerfectLeaderboard', JSON.stringify(leaderboard));
+        async function getLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+                return [];
+            }
         }
 
         function calculateLeaderboardScore(score, time) {
@@ -670,8 +673,8 @@
             return Math.round(score * 1000 - time * 10);
         }
 
-        function isHighScore(score, time) {
-            const leaderboard = getLeaderboard();
+        async function isHighScore(score, time) {
+            const leaderboard = await getLeaderboard();
             const newScore = calculateLeaderboardScore(score, time);
             
             if (leaderboard.length < 10) {
@@ -689,14 +692,14 @@
             document.getElementById('playerName').focus();
         }
 
-        function submitScore() {
+        async function submitScore() {
             const name = document.getElementById('playerName').value.trim();
             if (!name) {
                 alert('Please enter your name!');
                 return;
             }
             
-            addToLeaderboard(name, currentScore, currentTime);
+            await addToLeaderboard(name, currentScore, currentTime);
             document.getElementById('nameModal').style.display = 'none';
         }
 
@@ -704,31 +707,30 @@
             document.getElementById('nameModal').style.display = 'none';
         }
 
-        function addToLeaderboard(name, score, time) {
-            const leaderboard = getLeaderboard();
-            const leaderboardScore = calculateLeaderboardScore(score, time);
-            
-            const entry = {
-                name: name,
-                score: score,
-                time: time,
-                leaderboardScore: leaderboardScore,
-                date: new Date().toLocaleDateString()
-            };
-            
-            leaderboard.push(entry);
-            leaderboard.sort((a, b) => b.leaderboardScore - a.leaderboardScore);
-            
-            if (leaderboard.length > 10) {
-                leaderboard.splice(10);
+        async function addToLeaderboard(name, score, time) {
+            try {
+                const response = await fetch('/api/leaderboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, score, time })
+                });
+                
+                if (response.ok) {
+                    await displayLeaderboard();
+                } else {
+                    console.error('Error saving score');
+                    alert('Error saving score. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error saving score:', error);
+                alert('Error saving score. Please try again.');
             }
-            
-            saveLeaderboard(leaderboard);
-            displayLeaderboard();
         }
 
-        function displayLeaderboard() {
-            const leaderboard = getLeaderboard();
+        async function displayLeaderboard() {
+            const leaderboard = await getLeaderboard();
             const container = document.getElementById('leaderboardList');
             
             if (leaderboard.length === 0) {
@@ -781,9 +783,9 @@
 
         // Initialize the game when the page loads
         window.addEventListener('load', () => {
-            setTimeout(() => {
+            setTimeout(async () => {
                 initGame();
-                displayLeaderboard();
+                await displayLeaderboard();
             }, 100); // Small delay to ensure canvas is properly sized
         });
 
