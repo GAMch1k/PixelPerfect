@@ -751,6 +751,9 @@
                 setupStartPosition();
                 updatePlayersList(data.players);
                 
+                // Enable inputs for multiplayer games
+                enableInputs();
+                
                 if (data.status === 'playing') {
                     startGame();
                 }
@@ -771,6 +774,10 @@
                 startPosition = data.startRect;
                 setupTargetRect();
                 setupStartPosition();
+                
+                // Ensure inputs are enabled when game starts
+                enableInputs();
+                
                 startGame();
                 
                 if (data.mode === 'rush') {
