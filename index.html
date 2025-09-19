@@ -733,6 +733,7 @@
         let practiceMode = false;
         let currentRound = 1;
         let hasSubmitted = false;
+        let startPosition = {};
 
         function initSocketConnection() {
             socket = io();
@@ -741,12 +742,13 @@
                 currentRoom = data.roomId;
                 currentMode = data.mode;
                 targetPosition = data.targetRect;
+                startPosition = data.startRect;
                 
                 document.getElementById('gameModeInfo').textContent = data.mode.charAt(0).toUpperCase() + data.mode.slice(1);
                 document.getElementById('roomInfo').textContent = data.roomId;
                 
                 setupTargetRect();
-                setupRandomStartPosition();
+                setupStartPosition();
                 updatePlayersList(data.players);
                 
                 if (data.status === 'playing') {
@@ -766,7 +768,9 @@
             
             socket.on('gameStarted', (data) => {
                 targetPosition = data.targetRect;
+                startPosition = data.startRect;
                 setupTargetRect();
+                setupStartPosition();
                 startGame();
                 
                 if (data.mode === 'rush') {
@@ -777,14 +781,6 @@
             
             socket.on('playerSubmission', (data) => {
                 updatePlayerScore(data);
-                // Update movable rectangle position if it's from current player
-                if (data.playerId === socket.id && data.rect) {
-                    const movableRect = document.getElementById('movableRect');
-                    movableRect.style.left = data.rect.x + 'px';
-                    movableRect.style.top = data.rect.y + 'px';
-                    movableRect.style.width = data.rect.width + 'px';
-                    movableRect.style.height = data.rect.height + 'px';
-                }
             });
             
             socket.on('gameEnded', (data) => {
@@ -921,6 +917,15 @@
             document.getElementById('yInput').value = y;
             document.getElementById('widthInput').value = width;
             document.getElementById('heightInput').value = height;
+            
+            updateMovableRect();
+        }
+
+        function setupStartPosition() {
+            document.getElementById('xInput').value = startPosition.x;
+            document.getElementById('yInput').value = startPosition.y;
+            document.getElementById('widthInput').value = startPosition.width;
+            document.getElementById('heightInput').value = startPosition.height;
             
             updateMovableRect();
         }

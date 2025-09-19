@@ -103,6 +103,7 @@ function createRoom(mode) {
     mode: mode,
     players: new Map(),
     targetRect: generateTargetRect(),
+    startRect: generateTargetRect(),
     status: 'waiting',
     startTime: null,
     endTime: null,
@@ -174,6 +175,7 @@ io.on('connection', (socket) => {
       roomId: room.id,
       mode: room.mode,
       targetRect: room.targetRect,
+      startRect: room.startRect,
       players: Array.from(room.players.values()),
       status: room.status
     })
@@ -188,6 +190,7 @@ io.on('connection', (socket) => {
       room.startTime = Date.now()
       io.to(room.id).emit('gameStarted', {
         targetRect: room.targetRect,
+        startRect: room.startRect,
         mode: 'normal'
       })
     } else if (mode === 'rush') {
@@ -198,6 +201,7 @@ io.on('connection', (socket) => {
         room.endTime = room.startTime + 60000 // 60 seconds
         io.to(room.id).emit('gameStarted', {
           targetRect: room.targetRect,
+          startRect: room.startRect,
           mode: 'rush',
           timeLeft: 60000
         })
@@ -212,6 +216,7 @@ io.on('connection', (socket) => {
         if (timeLeft > 0) {
           socket.emit('gameStarted', {
             targetRect: room.targetRect,
+            startRect: room.startRect,
             mode: 'rush',
             timeLeft: timeLeft
           })
@@ -269,8 +274,7 @@ io.on('connection', (socket) => {
       playerName: player.name,
       score: score,
       attemptCount: player.attemptCount,
-      bestScore: player.bestScore,
-      rect: userRect
+      bestScore: player.bestScore
     })
   })
   
