@@ -566,7 +566,7 @@
                 score = 100;
             }
 
-            return Math.round(score);
+            return Math.round(score * 100) / 100; // Round to 2 decimal places
         }
 
         function checkAlignment() {
@@ -601,7 +601,7 @@
             currentScore = score;
             currentTime = (Date.now() - startTime) / 1000;
             
-            document.getElementById('score').textContent = score;
+            document.getElementById('score').textContent = score.toFixed(2);
 
             const feedback = document.getElementById('feedback');
             
@@ -688,7 +688,7 @@
         }
 
         function showNameModal(score, time) {
-            document.getElementById('modalScore').textContent = score;
+            document.getElementById('modalScore').textContent = score.toFixed(2);
             document.getElementById('modalTime').textContent = time.toFixed(1) + 's';
             document.getElementById('playerName').value = '';
             document.getElementById('nameModal').style.display = 'block';
@@ -745,7 +745,7 @@
                 <div class="leaderboard-entry">
                     <span class="leaderboard-rank">#${index + 1}</span>
                     <span class="leaderboard-name">${entry.name}</span>
-                    <span class="leaderboard-score">${entry.score}pts</span>
+                    <span class="leaderboard-score">${entry.score.toFixed(2)}pts</span>
                     <span class="leaderboard-time">${entry.time.toFixed(1)}s</span>
                 </div>
             `).join('');
