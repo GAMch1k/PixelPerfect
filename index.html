@@ -634,29 +634,6 @@
         </div>
 
         <div class="controls">
-            <div class="game-status">
-                <div class="status-text" id="gameStatus">Waiting for players...</div>
-                <div id="rushTimer" class="rush-timer hidden">60</div>
-            </div>
-
-            <div class="players-panel">
-                <h3>👥 Players in Room</h3>
-                <div id="playersList" class="player-list">
-                    <!-- Players will be populated here -->
-                </div>
-            </div>
-
-            <div class="score-display">
-                <div class="score-number" id="score">0</div>
-                <div>Your Best Score</div>
-            </div>
-
-            <div class="timer-display">
-                <div class="timer-number" id="timer">0.0s</div>
-                <div>Current Attempt</div>
-            </div>
-
-
             <div class="control-group">
                 <label for="xInput">X Position (px)</label>
                 <input type="number" id="xInput" value="0" min="0">
@@ -680,6 +657,28 @@
             <button class="button" id="submitBtn" onclick="submitAlignment()" disabled>🎯 Submit Alignment</button>
             <button class="button secondary-btn" id="newChallengeBtn" onclick="newRound()" style="display: none;">🔄 New Challenge</button>
             <button class="button secondary-btn" onclick="leaveGame()">🚪 Leave Game</button>
+
+            <div class="game-status">
+                <div class="status-text" id="gameStatus">Waiting for players...</div>
+                <div id="rushTimer" class="rush-timer hidden">60</div>
+            </div>
+
+            <div class="players-panel">
+                <h3>👥 Players in Room</h3>
+                <div id="playersList" class="player-list">
+                    <!-- Players will be populated here -->
+                </div>
+            </div>
+
+            <div class="score-display">
+                <div class="score-number" id="score">0</div>
+                <div>Your Best Score</div>
+            </div>
+
+            <div class="timer-display">
+                <div class="timer-number" id="timer">0.0s</div>
+                <div>Current Attempt</div>
+            </div>
             
             <div class="leaderboard">
                 <h3>🏆 Top 10 Leaderboard</h3>
