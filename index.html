@@ -550,6 +550,15 @@
         </div>
         
         <div class="mode-buttons">
+            <button class="mode-button" onclick="startSinglePlayer()">
+                <div style="font-size: 20px; margin-bottom: 10px;">🎯 Single Player</div>
+                <div style="font-size: 14px; opacity: 0.8;">
+                    • Play solo<br>
+                    • Practice mode available<br>
+                    • Leaderboard scoring
+                </div>
+            </button>
+            
             <button class="mode-button" onclick="joinGame('normal')">
                 <div style="font-size: 20px; margin-bottom: 10px;">⚡ Normal Mode</div>
                 <div style="font-size: 14px; opacity: 0.8;">
@@ -617,8 +626,19 @@
                     <span class="info-value" id="roomInfo">-</span>
                 </div>
                 <div class="info-row">
+                    <span class="info-label">Round:</span>
+                    <span class="info-value" id="roundInfo">1</span>
+                </div>
+                <div class="info-row">
                     <span class="info-label">Attempts:</span>
                     <span class="info-value" id="attemptCount">0</span>
+                </div>
+                <div class="info-row" id="practiceModeRow" style="display: none;">
+                    <span class="info-label">
+                        <input type="checkbox" id="practiceMode" style="margin-right: 8px;">
+                        Practice Mode
+                    </span>
+                    <span class="info-value" id="practiceModeStatus">Off</span>
                 </div>
             </div>
 
@@ -643,6 +663,7 @@
             </div>
 
             <button class="button" id="submitBtn" onclick="submitAlignment()" disabled>🎯 Submit Alignment</button>
+            <button class="button secondary-btn" id="newChallengeBtn" onclick="newRound()" style="display: none;">🔄 New Challenge</button>
             <button class="button secondary-btn" onclick="leaveGame()">🚪 Leave Game</button>
             
             <div class="leaderboard">
@@ -665,6 +686,20 @@
         </div>
     </div>
 
+    <!-- Name Entry Modal -->
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <h2>🎉 New High Score!</h2>
+            <p>You achieved a score of <span id="modalScore"></span> in <span id="modalTime"></span>!</p>
+            <p>Enter your name for the leaderboard:</p>
+            <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+            <div class="modal-buttons">
+                <button class="modal-button primary" onclick="submitScore()">Submit</button>
+                <button class="modal-button secondary" onclick="skipScore()">Skip</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let socket = null;
         let currentRoom = null;
@@ -679,6 +714,10 @@
         let gameStarted = false;
         let rushTimeLeft = 0;
         let rushTimerInterval = null;
+        let singlePlayerMode = false;
+        let practiceMode = false;
+        let currentRound = 1;
+        let hasSubmitted = false;
 
         function initSocketConnection() {
             socket = io();
@@ -734,6 +773,30 @@
             });
         }
 
+        function startSinglePlayer() {
+            singlePlayerMode = true;
+            
+            document.getElementById('modeSelector').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            
+            const canvas = document.getElementById('canvas');
+            canvasWidth = canvas.clientWidth - 4;
+            canvasHeight = canvas.clientHeight - 4;
+            
+            // Setup single player UI
+            document.getElementById('gameModeInfo').textContent = 'Single Player';
+            document.getElementById('roomInfo').textContent = 'Local';
+            document.getElementById('gameStatus').textContent = 'Single Player Mode';
+            document.getElementById('practiceModeRow').style.display = 'flex';
+            document.getElementById('newChallengeBtn').style.display = 'block';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('playersList').innerHTML = '<div class="player-item"><span class="player-name">You</span><span class="player-score">0.00 (0)</span></div>';
+            
+            setupInputListeners();
+            setupPracticeModeListener();
+            newRound();
+        }
+
         function joinGame(mode) {
             const playerName = document.getElementById('playerNameInput').value.trim();
             if (!playerName) {
@@ -766,6 +829,7 @@
             document.getElementById('modeSelector').classList.remove('hidden');
             document.getElementById('gameContainer').classList.add('hidden');
             document.getElementById('resultsModal').style.display = 'none';
+            document.getElementById('nameModal').style.display = 'none';
             
             // Reset game state
             currentRoom = null;
@@ -773,6 +837,14 @@
             gameStarted = false;
             attemptCount = 0;
             currentScore = 0;
+            singlePlayerMode = false;
+            practiceMode = false;
+            currentRound = 1;
+            hasSubmitted = false;
+            
+            // Hide single player elements
+            document.getElementById('practiceModeRow').style.display = 'none';
+            document.getElementById('newChallengeBtn').style.display = 'none';
             
             stopTimer();
             stopRushTimer();
@@ -784,10 +856,24 @@
                 const input = document.getElementById(id);
                 input.addEventListener('input', updateMovableRect);
                 input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter' && gameStarted) {
+                    if (e.key === 'Enter' && (gameStarted || singlePlayerMode)) {
                         submitAlignment();
                     }
                 });
+            });
+        }
+
+        function setupPracticeModeListener() {
+            const practiceModeCheckbox = document.getElementById('practiceMode');
+            practiceModeCheckbox.addEventListener('change', (e) => {
+                const wasPracticeMode = practiceMode;
+                practiceMode = e.target.checked;
+                document.getElementById('practiceModeStatus').textContent = practiceMode ? 'On' : 'Off';
+                
+                // If switching from practice mode to normal mode, regenerate level
+                if (wasPracticeMode && !practiceMode) {
+                    newRound();
+                }
             });
         }
 
@@ -836,7 +922,119 @@
             startTimer();
         }
 
+        function newRound() {
+            // Stop any existing timer before starting a new round
+            stopTimer();
+            
+            targetPosition = generateRandomTarget();
+            
+            const targetRect = document.getElementById('targetRect');
+            targetRect.style.left = targetPosition.x + 'px';
+            targetRect.style.top = targetPosition.y + 'px';
+            targetRect.style.width = targetPosition.width + 'px';
+            targetRect.style.height = targetPosition.height + 'px';
+
+            // Set random start position for inputs and show starting rectangle
+            setupRandomStartPosition();
+            
+            document.getElementById('roundInfo').textContent = currentRound;
+            
+            // Hide previous feedback
+            const feedback = document.getElementById('feedback');
+            feedback.style.display = 'none';
+            
+            // Remove any previous animations
+            const movableRect = document.getElementById('movableRect');
+            movableRect.classList.remove('checking', 'perfect-alignment');
+            
+            // Reset submission state and enable inputs
+            hasSubmitted = false;
+            enableInputs();
+            
+            // Start timer
+            startTimer();
+        }
+
+        function generateRandomTarget() {
+            const maxWidth = canvasWidth * 0.4;
+            const maxHeight = canvasHeight * 0.4;
+            
+            const width = Math.floor(Math.random() * (maxWidth - 50)) + 50;
+            const height = Math.floor(Math.random() * (maxHeight - 30)) + 30;
+            const x = Math.floor(Math.random() * (canvasWidth - width));
+            const y = Math.floor(Math.random() * (canvasHeight - height));
+
+            return { x, y, width, height };
+        }
+
         function submitAlignment() {
+            if (singlePlayerMode) {
+                submitSinglePlayer();
+            } else {
+                submitMultiplayer();
+            }
+        }
+
+        function submitSinglePlayer() {
+            if (hasSubmitted && !practiceMode) {
+                return; // Prevent multiple submissions in normal mode
+            }
+            
+            if (!practiceMode) {
+                hasSubmitted = true;
+            }
+            
+            // Stop timer
+            stopTimer();
+            
+            const x = parseInt(document.getElementById('xInput').value) || 0;
+            const y = parseInt(document.getElementById('yInput').value) || 0;
+            const width = parseInt(document.getElementById('widthInput').value) || 100;
+            const height = parseInt(document.getElementById('heightInput').value) || 100;
+            
+            const submissionTime = (Date.now() - startTime) / 1000;
+            const score = calculateScore(x, y, width, height);
+            
+            attemptCount++;
+            document.getElementById('attemptCount').textContent = attemptCount;
+            
+            if (score > currentScore) {
+                currentScore = score;
+                document.getElementById('score').textContent = score.toFixed(2);
+            }
+            
+            // Update player list
+            document.getElementById('playersList').innerHTML = `<div class="player-item"><span class="player-name">You</span><span class="player-score">${currentScore.toFixed(2)} (${attemptCount})</span></div>`;
+            
+            // Show feedback
+            showFeedback(score);
+            
+            // Disable inputs after submission (only in normal mode)
+            if (!practiceMode) {
+                disableInputs();
+            }
+            
+            // Check if this is a high score (only in normal mode)
+            if (!practiceMode) {
+                isHighScore(score, submissionTime).then(isHigh => {
+                    if (isHigh) {
+                        setTimeout(() => {
+                            showNameModal(score, submissionTime);
+                        }, 1000);
+                    }
+                });
+            }
+            
+            // Auto-advance to next round after perfect alignment (only in normal mode)
+            if (score === 100 && !practiceMode) {
+                setTimeout(() => {
+                    currentRound++;
+                    newRound();
+                }, 2000);
+            }
+        }
+
+        function submitMultiplayer() {
             if (!gameStarted || !socket) return;
             
             // Check if normal mode and already submitted
@@ -1017,6 +1215,78 @@
             leaveGame();
         }
 
+        async function isHighScore(score, time) {
+            const leaderboard = await getLeaderboard();
+            const newScore = calculateLeaderboardScore(score, time);
+            
+            if (leaderboard.length < 10) {
+                return true;
+            }
+            
+            return newScore > leaderboard[leaderboard.length - 1].leaderboardScore;
+        }
+
+        function calculateLeaderboardScore(score, time) {
+            // Higher score is better, lower time is better
+            // Formula: score * 1000 - time * 10 (to give more weight to score)
+            return Math.round(score * 1000 - time * 10);
+        }
+
+        async function getLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+                return [];
+            }
+        }
+
+        function showNameModal(score, time) {
+            document.getElementById('modalScore').textContent = score.toFixed(2);
+            document.getElementById('modalTime').textContent = time.toFixed(1) + 's';
+            document.getElementById('playerName').value = '';
+            document.getElementById('nameModal').style.display = 'block';
+            document.getElementById('playerName').focus();
+        }
+
+        async function submitScore() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                alert('Please enter your name!');
+                return;
+            }
+            
+            await addToLeaderboard(name, currentScore, (Date.now() - startTime) / 1000);
+            document.getElementById('nameModal').style.display = 'none';
+        }
+
+        function skipScore() {
+            document.getElementById('nameModal').style.display = 'none';
+        }
+
+        async function addToLeaderboard(name, score, time) {
+            try {
+                const response = await fetch('/api/leaderboard', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, score, time })
+                });
+                
+                if (response.ok) {
+                    await displayLeaderboard();
+                } else {
+                    console.error('Error saving score');
+                    alert('Error saving score. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error saving score:', error);
+                alert('Error saving score. Please try again.');
+            }
+        }
+
         function enableInputs() {
             const inputs = ['xInput', 'yInput', 'widthInput', 'heightInput'];
             inputs.forEach(id => {
@@ -1058,6 +1328,13 @@
                 console.error('Error fetching leaderboard:', error);
             }
         }
+
+        // Handle Enter key in name modal
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && document.getElementById('nameModal').style.display === 'block') {
+                submitScore();
+            }
+        });
 
         // Initialize when page loads
         window.addEventListener('load', () => {
