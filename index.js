@@ -269,7 +269,8 @@ io.on('connection', (socket) => {
       playerName: player.name,
       score: score,
       attemptCount: player.attemptCount,
-      bestScore: player.bestScore
+      bestScore: player.bestScore,
+      rect: userRect
     })
   })
   

@@ -224,6 +224,16 @@
             border-radius: 10px;
             padding: 20px;
             position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .canvas-container {
+            flex: 1;
+        }
+
+        .game-info {
+            margin-top: 20px;
         }
 
         .canvas {
@@ -582,11 +592,45 @@
 
     <div id="gameContainer" class="game-container hidden">
         <div class="game-area">
-            <div class="canvas" id="canvas">
-                <div class="rectangle target-rect" id="targetRect"></div>
-                <div class="rectangle movable-rect" id="movableRect"></div>
+            <div class="canvas-container">
+                <div class="canvas" id="canvas">
+                    <div class="rectangle target-rect" id="targetRect"></div>
+                    <div class="rectangle movable-rect" id="movableRect"></div>
+                </div>
+                <div id="feedback" class="feedback" style="display: none;"></div>
             </div>
-            <div id="feedback" class="feedback" style="display: none;"></div>
+            
+            <div class="game-info">
+                <div class="info-panel">
+                    <div class="info-row">
+                        <span class="info-label">Your Task:</span>
+                        <span class="info-value">Align Green Rectangle</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Game Mode:</span>
+                        <span class="info-value" id="gameModeInfo">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Room:</span>
+                        <span class="info-value" id="roomInfo">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Round:</span>
+                        <span class="info-value" id="roundInfo">1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Attempts:</span>
+                        <span class="info-value" id="attemptCount">0</span>
+                    </div>
+                    <div class="info-row" id="practiceModeRow" style="display: none;">
+                        <span class="info-label">
+                            <input type="checkbox" id="practiceMode" style="margin-right: 8px;">
+                            Practice Mode
+                        </span>
+                        <span class="info-value" id="practiceModeStatus">Off</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="controls">
@@ -612,35 +656,6 @@
                 <div>Current Attempt</div>
             </div>
 
-            <div class="info-panel">
-                <div class="info-row">
-                    <span class="info-label">Your Task:</span>
-                    <span class="info-value">Align Green Rectangle</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Game Mode:</span>
-                    <span class="info-value" id="gameModeInfo">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Room:</span>
-                    <span class="info-value" id="roomInfo">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Round:</span>
-                    <span class="info-value" id="roundInfo">1</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Attempts:</span>
-                    <span class="info-value" id="attemptCount">0</span>
-                </div>
-                <div class="info-row" id="practiceModeRow" style="display: none;">
-                    <span class="info-label">
-                        <input type="checkbox" id="practiceMode" style="margin-right: 8px;">
-                        Practice Mode
-                    </span>
-                    <span class="info-value" id="practiceModeStatus">Off</span>
-                </div>
-            </div>
 
             <div class="control-group">
                 <label for="xInput">X Position (px)</label>
@@ -762,6 +777,14 @@
             
             socket.on('playerSubmission', (data) => {
                 updatePlayerScore(data);
+                // Update movable rectangle position if it's from current player
+                if (data.playerId === socket.id && data.rect) {
+                    const movableRect = document.getElementById('movableRect');
+                    movableRect.style.left = data.rect.x + 'px';
+                    movableRect.style.top = data.rect.y + 'px';
+                    movableRect.style.width = data.rect.width + 'px';
+                    movableRect.style.height = data.rect.height + 'px';
+                }
             });
             
             socket.on('gameEnded', (data) => {
