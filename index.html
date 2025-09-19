@@ -476,8 +476,14 @@
         function setupPracticeModeListener() {
             const practiceModeCheckbox = document.getElementById('practiceMode');
             practiceModeCheckbox.addEventListener('change', (e) => {
+                const wasPracticeMode = practiceMode;
                 practiceMode = e.target.checked;
                 document.getElementById('practiceModeStatus').textContent = practiceMode ? 'On' : 'Off';
+                
+                // If switching from practice mode to normal mode, regenerate level
+                if (wasPracticeMode && !practiceMode) {
+                    newRound();
+                }
             });
         }
 
