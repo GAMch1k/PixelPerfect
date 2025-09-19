@@ -873,7 +873,12 @@
             const inputs = ['xInput', 'yInput', 'widthInput', 'heightInput'];
             inputs.forEach(id => {
                 const input = document.getElementById(id);
-                input.addEventListener('input', updateMovableRect);
+                input.addEventListener('input', () => {
+                    // Only update rectangle in real-time if not in rush mode
+                    if (currentMode !== 'rush') {
+                        updateMovableRect();
+                    }
+                });
                 input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter' && (gameStarted || singlePlayerMode)) {
                         submitAlignment();
@@ -1074,6 +1079,9 @@
             const y = parseInt(document.getElementById('yInput').value) || 0;
             const width = parseInt(document.getElementById('widthInput').value) || 100;
             const height = parseInt(document.getElementById('heightInput').value) || 100;
+            
+            // Update rectangle position on submit (especially important for rush mode)
+            updateMovableRect();
             
             const submissionTime = (Date.now() - startTime) / 1000;
             
