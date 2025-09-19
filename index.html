@@ -654,8 +654,8 @@
                 <input type="number" id="heightInput" value="100" min="1">
             </div>
 
-            <button class="button" id="submitBtn" onclick="submitAlignment()" disabled>🎯 Submit Alignment</button>
-            <button class="button secondary-btn" id="newChallengeBtn" onclick="newRound()" style="display: none;">🔄 New Challenge</button>
+            <button class="button" id="submitBtn" onclick="submitAlignment()" disabled>🎯 Submit Alignment (Enter)</button>
+            <button class="button secondary-btn" id="newChallengeBtn" onclick="newRound()" style="display: none;">🔄 New Challenge (R)</button>
             <button class="button secondary-btn" onclick="leaveGame()">🚪 Leave Game</button>
 
             <div class="game-status">
@@ -1374,10 +1374,19 @@
             }
         }
 
-        // Handle Enter key in name modal
+        // Handle Enter key in name modal and R key for new challenge
         document.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && document.getElementById('nameModal').style.display === 'block') {
                 submitScore();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            // Handle R key for new challenge (only in single player mode)
+            if (e.key === 'r' || e.key === 'R') {
+                if (singlePlayerMode && document.getElementById('newChallengeBtn').style.display !== 'none') {
+                    newRound();
+                }
             }
         });
 
