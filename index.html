@@ -880,8 +880,8 @@
             inputs.forEach(id => {
                 const input = document.getElementById(id);
                 input.addEventListener('input', () => {
-                    // Only update rectangle in real-time if not in rush mode
-                    if (currentMode !== 'rush') {
+                    // Only update rectangle in real-time in practice mode
+                    if (singlePlayerMode && practiceMode) {
                         updateMovableRect();
                     }
                 });
@@ -1030,6 +1030,9 @@
             const y = parseInt(document.getElementById('yInput').value) || 0;
             const width = parseInt(document.getElementById('widthInput').value) || 100;
             const height = parseInt(document.getElementById('heightInput').value) || 100;
+            
+            // Update rectangle position on submit
+            updateMovableRect();
             
             const submissionTime = (Date.now() - startTime) / 1000;
             const score = calculateScore(x, y, width, height);
