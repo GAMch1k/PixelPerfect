@@ -397,6 +397,13 @@
                     <span class="info-label">Round:</span>
                     <span class="info-value" id="roundInfo">1</span>
                 </div>
+                <div class="info-row">
+                    <span class="info-label">
+                        <input type="checkbox" id="practiceMode" style="margin-right: 8px;">
+                        Practice Mode
+                    </span>
+                    <span class="info-value" id="practiceModeStatus">Off</span>
+                </div>
             </div>
 
             <div class="control-group">
@@ -455,6 +462,7 @@
         let currentScore = 0;
         let currentTime = 0;
         let hasSubmitted = false;
+        let practiceMode = false;
 
         function initGame() {
             const canvas = document.getElementById('canvas');
@@ -462,6 +470,15 @@
             canvasHeight = canvas.clientHeight - 4;
             newRound();
             setupInputListeners();
+            setupPracticeModeListener();
+        }
+
+        function setupPracticeModeListener() {
+            const practiceModeCheckbox = document.getElementById('practiceMode');
+            practiceModeCheckbox.addEventListener('change', (e) => {
+                practiceMode = e.target.checked;
+                document.getElementById('practiceModeStatus').textContent = practiceMode ? 'On' : 'Off';
+            });
         }
 
         function setupInputListeners() {
@@ -570,17 +587,21 @@
         }
 
         function checkAlignment() {
-            if (hasSubmitted) {
-                return; // Prevent multiple submissions
+            if (hasSubmitted && !practiceMode) {
+                return; // Prevent multiple submissions in normal mode
             }
             
-            hasSubmitted = true;
+            if (!practiceMode) {
+                hasSubmitted = true;
+            }
             
             // Stop timer
             stopTimer();
             
-            // Disable inputs after submission
-            disableInputs();
+            // Disable inputs after submission (only in normal mode)
+            if (!practiceMode) {
+                disableInputs();
+            }
             
             // Update the rectangle position based on current input values
             const x = parseInt(document.getElementById('xInput').value) || 0;
@@ -625,17 +646,19 @@
                 feedback.className = 'feedback needs-work';
             }
 
-            // Check if this is a high score
-            isHighScore(score, currentTime).then(isHigh => {
-                if (isHigh) {
-                    setTimeout(() => {
-                        showNameModal(score, currentTime);
-                    }, 1000);
-                }
-            });
+            // Check if this is a high score (only in normal mode)
+            if (!practiceMode) {
+                isHighScore(score, currentTime).then(isHigh => {
+                    if (isHigh) {
+                        setTimeout(() => {
+                            showNameModal(score, currentTime);
+                        }, 1000);
+                    }
+                });
+            }
 
-            // Auto-advance to next round after perfect alignment
-            if (score === 100) {
+            // Auto-advance to next round after perfect alignment (only in normal mode)
+            if (score === 100 && !practiceMode) {
                 setTimeout(() => {
                     currentRound++;
                     newRound();
