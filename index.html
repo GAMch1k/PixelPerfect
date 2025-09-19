@@ -489,6 +489,9 @@
         }
 
         function newRound() {
+            // Stop any existing timer before starting a new round
+            stopTimer();
+            
             targetPosition = generateRandomTarget();
             
             const targetRect = document.getElementById('targetRect');
