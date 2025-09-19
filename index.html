@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Perfect - Alignment Game</title>
+    <title>Pixel Perfect - Multiplayer Alignment Game</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
             margin: 0;
@@ -36,6 +37,178 @@
         .subtitle {
             color: #bbb;
             font-size: 1.1rem;
+        }
+
+        .mode-selector {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .mode-button {
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .mode-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .mode-button.rush {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+        }
+
+        .mode-button.rush:hover {
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+        }
+
+        .name-input {
+            margin: 20px 0;
+        }
+
+        .name-input input {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #555;
+            border-radius: 5px;
+            background: #1a1a1a;
+            color: #fff;
+            text-align: center;
+            width: 250px;
+        }
+
+        .players-panel {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .players-panel h3 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .player-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            background: #2a2a2a;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        .player-name {
+            color: #fff;
+        }
+
+        .player-score {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .game-status {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .status-text {
+            color: #ffc107;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .rush-timer {
+            color: #ff6b6b;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .results-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .results-content {
+            background-color: #2a2a2a;
+            margin: 10% auto;
+            padding: 30px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            width: 500px;
+            text-align: center;
+        }
+
+        .results-list {
+            margin: 20px 0;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #1a1a1a;
+            border-radius: 5px;
+        }
+
+        .result-rank {
+            color: #ffc107;
+            font-weight: bold;
+            width: 40px;
+        }
+
+        .result-name {
+            color: #fff;
+            flex: 1;
+            text-align: left;
+            margin-left: 10px;
+        }
+
+        .result-score {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
         }
 
         .game-container {
@@ -365,10 +538,40 @@
 <body>
     <div class="header">
         <h1>🎯 Pixel Perfect</h1>
-        <div class="subtitle">The Ultimate Frontend Developer Alignment Challenge</div>
+        <div class="subtitle">The Ultimate Multiplayer Frontend Developer Alignment Challenge</div>
     </div>
 
-    <div class="game-container">
+    <!-- Mode Selection Screen -->
+    <div id="modeSelector" class="mode-selector">
+        <h2 style="color: #4CAF50; margin-bottom: 20px;">Choose Game Mode</h2>
+        
+        <div class="name-input">
+            <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="20">
+        </div>
+        
+        <div class="mode-buttons">
+            <button class="mode-button" onclick="joinGame('normal')">
+                <div style="font-size: 20px; margin-bottom: 10px;">⚡ Normal Mode</div>
+                <div style="font-size: 14px; opacity: 0.8;">
+                    • Wait for players<br>
+                    • One attempt per player<br>
+                    • Best score + time wins
+                </div>
+            </button>
+            
+            <button class="mode-button rush" onclick="joinGame('rush')">
+                <div style="font-size: 20px; margin-bottom: 10px;">🏃 Rush Mode</div>
+                <div style="font-size: 14px; opacity: 0.8;">
+                    • Join anytime<br>
+                    • 60 seconds time limit<br>
+                    • Unlimited attempts<br>
+                    • Best score + fewest attempts wins
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <div id="gameContainer" class="game-container hidden">
         <div class="game-area">
             <div class="canvas" id="canvas">
                 <div class="rectangle target-rect" id="targetRect"></div>
@@ -378,14 +581,26 @@
         </div>
 
         <div class="controls">
+            <div class="game-status">
+                <div class="status-text" id="gameStatus">Waiting for players...</div>
+                <div id="rushTimer" class="rush-timer hidden">60</div>
+            </div>
+
+            <div class="players-panel">
+                <h3>👥 Players in Room</h3>
+                <div id="playersList" class="player-list">
+                    <!-- Players will be populated here -->
+                </div>
+            </div>
+
             <div class="score-display">
                 <div class="score-number" id="score">0</div>
-                <div>Accuracy Score</div>
+                <div>Your Best Score</div>
             </div>
 
             <div class="timer-display">
                 <div class="timer-number" id="timer">0.0s</div>
-                <div>Time Elapsed</div>
+                <div>Current Attempt</div>
             </div>
 
             <div class="info-panel">
@@ -394,15 +609,16 @@
                     <span class="info-value">Align Green Rectangle</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Round:</span>
-                    <span class="info-value" id="roundInfo">1</span>
+                    <span class="info-label">Game Mode:</span>
+                    <span class="info-value" id="gameModeInfo">-</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">
-                        <input type="checkbox" id="practiceMode" style="margin-right: 8px;">
-                        Practice Mode
-                    </span>
-                    <span class="info-value" id="practiceModeStatus">Off</span>
+                    <span class="info-label">Room:</span>
+                    <span class="info-value" id="roomInfo">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Attempts:</span>
+                    <span class="info-value" id="attemptCount">0</span>
                 </div>
             </div>
 
@@ -426,8 +642,8 @@
                 <input type="number" id="heightInput" value="100" min="1">
             </div>
 
-            <button class="button" onclick="checkAlignment()">🎯 Check Alignment</button>
-            <button class="button secondary-btn" onclick="newRound()">🔄 New Challenge</button>
+            <button class="button" id="submitBtn" onclick="submitAlignment()" disabled>🎯 Submit Alignment</button>
+            <button class="button secondary-btn" onclick="leaveGame()">🚪 Leave Game</button>
             
             <div class="leaderboard">
                 <h3>🏆 Top 10 Leaderboard</h3>
@@ -438,68 +654,152 @@
         </div>
     </div>
 
-    <!-- Name Entry Modal -->
-    <div id="nameModal" class="modal">
-        <div class="modal-content">
-            <h2>🎉 New High Score!</h2>
-            <p>You achieved a score of <span id="modalScore"></span> in <span id="modalTime"></span>!</p>
-            <p>Enter your name for the leaderboard:</p>
-            <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
-            <div class="modal-buttons">
-                <button class="modal-button primary" onclick="submitScore()">Submit</button>
-                <button class="modal-button secondary" onclick="skipScore()">Skip</button>
+    <!-- Results Modal -->
+    <div id="resultsModal" class="results-modal">
+        <div class="results-content">
+            <h2 id="resultsTitle">🎉 Game Results</h2>
+            <div id="resultsList" class="results-list">
+                <!-- Results will be populated here -->
             </div>
+            <button class="button" onclick="closeResults()">Play Again</button>
         </div>
     </div>
 
     <script>
-        let currentRound = 1;
+        let socket = null;
+        let currentRoom = null;
+        let currentMode = null;
         let targetPosition = {};
         let canvasWidth = 0;
         let canvasHeight = 0;
         let startTime = 0;
         let timerInterval = null;
         let currentScore = 0;
-        let currentTime = 0;
-        let hasSubmitted = false;
-        let practiceMode = false;
+        let attemptCount = 0;
+        let gameStarted = false;
+        let rushTimeLeft = 0;
+        let rushTimerInterval = null;
 
-        function initGame() {
-            const canvas = document.getElementById('canvas');
-            canvasWidth = canvas.clientWidth - 4; // Account for border
-            canvasHeight = canvas.clientHeight - 4;
-            newRound();
-            setupInputListeners();
-            setupPracticeModeListener();
-        }
-
-        function setupPracticeModeListener() {
-            const practiceModeCheckbox = document.getElementById('practiceMode');
-            practiceModeCheckbox.addEventListener('change', (e) => {
-                const wasPracticeMode = practiceMode;
-                practiceMode = e.target.checked;
-                document.getElementById('practiceModeStatus').textContent = practiceMode ? 'On' : 'Off';
+        function initSocketConnection() {
+            socket = io();
+            
+            socket.on('roomJoined', (data) => {
+                currentRoom = data.roomId;
+                currentMode = data.mode;
+                targetPosition = data.targetRect;
                 
-                // If switching from practice mode to normal mode, regenerate level
-                if (wasPracticeMode && !practiceMode) {
-                    newRound();
+                document.getElementById('gameModeInfo').textContent = data.mode.charAt(0).toUpperCase() + data.mode.slice(1);
+                document.getElementById('roomInfo').textContent = data.roomId;
+                
+                setupTargetRect();
+                setupRandomStartPosition();
+                updatePlayersList(data.players);
+                
+                if (data.status === 'playing') {
+                    startGame();
                 }
             });
+            
+            socket.on('playerJoined', (player) => {
+                // Refresh players list
+                socket.emit('getPlayers');
+            });
+            
+            socket.on('playerLeft', (data) => {
+                // Refresh players list
+                socket.emit('getPlayers');
+            });
+            
+            socket.on('gameStarted', (data) => {
+                targetPosition = data.targetRect;
+                setupTargetRect();
+                startGame();
+                
+                if (data.mode === 'rush') {
+                    rushTimeLeft = Math.ceil(data.timeLeft / 1000);
+                    startRushTimer();
+                }
+            });
+            
+            socket.on('playerSubmission', (data) => {
+                updatePlayerScore(data);
+            });
+            
+            socket.on('gameEnded', (data) => {
+                showResults(data);
+            });
+            
+            socket.on('error', (data) => {
+                alert('Error: ' + data.message);
+            });
+        }
+
+        function joinGame(mode) {
+            const playerName = document.getElementById('playerNameInput').value.trim();
+            if (!playerName) {
+                alert('Please enter your name!');
+                return;
+            }
+            
+            if (!socket) {
+                initSocketConnection();
+            }
+            
+            socket.emit('joinGame', { mode, playerName });
+            
+            document.getElementById('modeSelector').classList.add('hidden');
+            document.getElementById('gameContainer').classList.remove('hidden');
+            
+            const canvas = document.getElementById('canvas');
+            canvasWidth = canvas.clientWidth - 4;
+            canvasHeight = canvas.clientHeight - 4;
+            
+            setupInputListeners();
+        }
+
+        function leaveGame() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            
+            document.getElementById('modeSelector').classList.remove('hidden');
+            document.getElementById('gameContainer').classList.add('hidden');
+            document.getElementById('resultsModal').style.display = 'none';
+            
+            // Reset game state
+            currentRoom = null;
+            currentMode = null;
+            gameStarted = false;
+            attemptCount = 0;
+            currentScore = 0;
+            
+            stopTimer();
+            stopRushTimer();
         }
 
         function setupInputListeners() {
             const inputs = ['xInput', 'yInput', 'widthInput', 'heightInput'];
             inputs.forEach(id => {
                 const input = document.getElementById(id);
+                input.addEventListener('input', updateMovableRect);
                 input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        checkAlignment();
+                    if (e.key === 'Enter' && gameStarted) {
+                        submitAlignment();
                     }
                 });
             });
         }
 
-        function generateRandomTarget() {
+        function setupTargetRect() {
+            const targetRect = document.getElementById('targetRect');
+            targetRect.style.left = targetPosition.x + 'px';
+            targetRect.style.top = targetPosition.y + 'px';
+            targetRect.style.width = targetPosition.width + 'px';
+            targetRect.style.height = targetPosition.height + 'px';
+        }
+
+        function setupRandomStartPosition() {
             const maxWidth = canvasWidth * 0.4;
             const maxHeight = canvasHeight * 0.4;
             
@@ -508,51 +808,12 @@
             const x = Math.floor(Math.random() * (canvasWidth - width));
             const y = Math.floor(Math.random() * (canvasHeight - height));
 
-            return { x, y, width, height };
-        }
-
-        function newRound() {
-            // Stop any existing timer before starting a new round
-            stopTimer();
+            document.getElementById('xInput').value = x;
+            document.getElementById('yInput').value = y;
+            document.getElementById('widthInput').value = width;
+            document.getElementById('heightInput').value = height;
             
-            targetPosition = generateRandomTarget();
-            
-            const targetRect = document.getElementById('targetRect');
-            targetRect.style.left = targetPosition.x + 'px';
-            targetRect.style.top = targetPosition.y + 'px';
-            targetRect.style.width = targetPosition.width + 'px';
-            targetRect.style.height = targetPosition.height + 'px';
-
-            // Set random start position for inputs and show starting rectangle
-            const startPosition = generateRandomTarget();
-            document.getElementById('xInput').value = startPosition.x;
-            document.getElementById('yInput').value = startPosition.y;
-            document.getElementById('widthInput').value = startPosition.width;
-            document.getElementById('heightInput').value = startPosition.height;
-            
-            // Show the movable rectangle at starting position
-            const movableRect = document.getElementById('movableRect');
-            movableRect.style.left = startPosition.x + 'px';
-            movableRect.style.top = startPosition.y + 'px';
-            movableRect.style.width = startPosition.width + 'px';
-            movableRect.style.height = startPosition.height + 'px';
-            movableRect.classList.remove('checking');
-            
-            document.getElementById('roundInfo').textContent = currentRound;
-            
-            // Hide previous feedback
-            const feedback = document.getElementById('feedback');
-            feedback.style.display = 'none';
-            
-            // Remove any previous animations
-            movableRect.classList.remove('perfect-alignment');
-            
-            // Reset submission state and enable inputs
-            hasSubmitted = false;
-            enableInputs();
-            
-            // Start timer
-            startTimer();
+            updateMovableRect();
         }
 
         function updateMovableRect() {
@@ -568,70 +829,76 @@
             movableRect.style.height = height + 'px';
         }
 
-        function calculateScore() {
-            const userX = parseInt(document.getElementById('xInput').value) || 0;
-            const userY = parseInt(document.getElementById('yInput').value) || 0;
-            const userWidth = parseInt(document.getElementById('widthInput').value) || 100;
-            const userHeight = parseInt(document.getElementById('heightInput').value) || 100;
+        function startGame() {
+            gameStarted = true;
+            document.getElementById('gameStatus').textContent = 'Game in progress!';
+            document.getElementById('submitBtn').disabled = false;
+            startTimer();
+        }
 
+        function submitAlignment() {
+            if (!gameStarted || !socket) return;
+            
+            // Check if normal mode and already submitted
+            if (currentMode === 'normal' && attemptCount > 0) {
+                return;
+            }
+            
+            const x = parseInt(document.getElementById('xInput').value) || 0;
+            const y = parseInt(document.getElementById('yInput').value) || 0;
+            const width = parseInt(document.getElementById('widthInput').value) || 100;
+            const height = parseInt(document.getElementById('heightInput').value) || 100;
+            
+            const submissionTime = (Date.now() - startTime) / 1000;
+            
+            socket.emit('submitAlignment', { x, y, width, height, submissionTime });
+            
+            attemptCount++;
+            document.getElementById('attemptCount').textContent = attemptCount;
+            
+            // Calculate and display score locally
+            const score = calculateScore(x, y, width, height);
+            if (score > currentScore) {
+                currentScore = score;
+                document.getElementById('score').textContent = score.toFixed(2);
+            }
+            
+            // Show feedback
+            showFeedback(score);
+            
+            // In normal mode, disable after first submission
+            if (currentMode === 'normal') {
+                document.getElementById('submitBtn').disabled = true;
+                disableInputs();
+            } else {
+                // In rush mode, restart timer for next attempt
+                startTimer();
+            }
+        }
+
+        function calculateScore(userX, userY, userWidth, userHeight) {
             const xDiff = Math.abs(userX - targetPosition.x);
             const yDiff = Math.abs(userY - targetPosition.y);
             const widthDiff = Math.abs(userWidth - targetPosition.width);
             const heightDiff = Math.abs(userHeight - targetPosition.height);
 
             const totalDiff = xDiff + yDiff + widthDiff + heightDiff;
-            const maxPossibleDiff = canvasWidth + canvasHeight; // Rough estimate for scaling
+            const maxPossibleDiff = canvasWidth + canvasHeight;
             
             let score = Math.max(0, 100 - (totalDiff / maxPossibleDiff) * 100);
             
-            // Perfect alignment bonus
             if (totalDiff === 0) {
                 score = 100;
             }
 
-            return Math.round(score * 100) / 100; // Round to 2 decimal places
+            return Math.round(score * 100) / 100;
         }
 
-        function checkAlignment() {
-            if (hasSubmitted && !practiceMode) {
-                return; // Prevent multiple submissions in normal mode
-            }
-            
-            if (!practiceMode) {
-                hasSubmitted = true;
-            }
-            
-            // Stop timer
-            stopTimer();
-            
-            // Disable inputs after submission (only in normal mode)
-            if (!practiceMode) {
-                disableInputs();
-            }
-            
-            // Update the rectangle position based on current input values
-            const x = parseInt(document.getElementById('xInput').value) || 0;
-            const y = parseInt(document.getElementById('yInput').value) || 0;
-            const width = parseInt(document.getElementById('widthInput').value) || 100;
-            const height = parseInt(document.getElementById('heightInput').value) || 100;
-
-            const movableRect = document.getElementById('movableRect');
-            movableRect.style.left = x + 'px';
-            movableRect.style.top = y + 'px';
-            movableRect.style.width = width + 'px';
-            movableRect.style.height = height + 'px';
-            
-            // Add visual emphasis to show this is the checking state
-            movableRect.classList.add('checking');
-
-            const score = calculateScore();
-            currentScore = score;
-            currentTime = (Date.now() - startTime) / 1000;
-            
-            document.getElementById('score').textContent = score.toFixed(2);
-
+        function showFeedback(score) {
             const feedback = document.getElementById('feedback');
+            const movableRect = document.getElementById('movableRect');
             
+            movableRect.classList.add('checking');
             feedback.style.display = 'block';
             
             if (score === 100) {
@@ -651,29 +918,34 @@
                 feedback.textContent = '🎯 Keep trying! Focus on positioning!';
                 feedback.className = 'feedback needs-work';
             }
+            
+            setTimeout(() => {
+                movableRect.classList.remove('checking', 'perfect-alignment');
+                if (currentMode === 'rush') {
+                    feedback.style.display = 'none';
+                }
+            }, 2000);
+        }
 
-            // Check if this is a high score (only in normal mode)
-            if (!practiceMode) {
-                isHighScore(score, currentTime).then(isHigh => {
-                    if (isHigh) {
-                        setTimeout(() => {
-                            showNameModal(score, currentTime);
-                        }, 1000);
-                    }
-                });
-            }
+        function updatePlayersList(players) {
+            const container = document.getElementById('playersList');
+            container.innerHTML = players.map(player => `
+                <div class="player-item">
+                    <span class="player-name">${player.name}</span>
+                    <span class="player-score">${player.bestScore.toFixed(2)} (${player.attemptCount})</span>
+                </div>
+            `).join('');
+        }
 
-            // Auto-advance to next round after perfect alignment (only in normal mode)
-            if (score === 100 && !practiceMode) {
-                setTimeout(() => {
-                    currentRound++;
-                    newRound();
-                }, 2000);
-            }
+        function updatePlayerScore(data) {
+            // This will be called when any player submits
+            // We could update the players list here, but for simplicity we'll just log it
+            console.log(`${data.playerName} scored ${data.score.toFixed(2)} (attempt ${data.attemptCount})`);
         }
 
         function startTimer() {
             startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(updateTimer, 100);
         }
 
@@ -689,95 +961,60 @@
             document.getElementById('timer').textContent = elapsed.toFixed(1) + 's';
         }
 
-        async function getLeaderboard() {
-            try {
-                const response = await fetch('/api/leaderboard');
-                return await response.json();
-            } catch (error) {
-                console.error('Error fetching leaderboard:', error);
-                return [];
-            }
-        }
-
-        function calculateLeaderboardScore(score, time) {
-            // Higher score is better, lower time is better
-            // Formula: score * 1000 - time * 10 (to give more weight to score)
-            return Math.round(score * 1000 - time * 10);
-        }
-
-        async function isHighScore(score, time) {
-            const leaderboard = await getLeaderboard();
-            const newScore = calculateLeaderboardScore(score, time);
+        function startRushTimer() {
+            document.getElementById('rushTimer').classList.remove('hidden');
+            document.getElementById('rushTimer').textContent = rushTimeLeft;
             
-            if (leaderboard.length < 10) {
-                return true;
-            }
-            
-            return newScore > leaderboard[leaderboard.length - 1].leaderboardScore;
-        }
-
-        function showNameModal(score, time) {
-            document.getElementById('modalScore').textContent = score.toFixed(2);
-            document.getElementById('modalTime').textContent = time.toFixed(1) + 's';
-            document.getElementById('playerName').value = '';
-            document.getElementById('nameModal').style.display = 'block';
-            document.getElementById('playerName').focus();
-        }
-
-        async function submitScore() {
-            const name = document.getElementById('playerName').value.trim();
-            if (!name) {
-                alert('Please enter your name!');
-                return;
-            }
-            
-            await addToLeaderboard(name, currentScore, currentTime);
-            document.getElementById('nameModal').style.display = 'none';
-        }
-
-        function skipScore() {
-            document.getElementById('nameModal').style.display = 'none';
-        }
-
-        async function addToLeaderboard(name, score, time) {
-            try {
-                const response = await fetch('/api/leaderboard', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ name, score, time })
-                });
+            rushTimerInterval = setInterval(() => {
+                rushTimeLeft--;
+                document.getElementById('rushTimer').textContent = rushTimeLeft;
                 
-                if (response.ok) {
-                    await displayLeaderboard();
-                } else {
-                    console.error('Error saving score');
-                    alert('Error saving score. Please try again.');
+                if (rushTimeLeft <= 0) {
+                    stopRushTimer();
+                    gameStarted = false;
+                    document.getElementById('submitBtn').disabled = true;
+                    document.getElementById('gameStatus').textContent = 'Time\'s up! Calculating results...';
                 }
-            } catch (error) {
-                console.error('Error saving score:', error);
-                alert('Error saving score. Please try again.');
-            }
+            }, 1000);
         }
 
-        async function displayLeaderboard() {
-            const leaderboard = await getLeaderboard();
-            const container = document.getElementById('leaderboardList');
-            
-            if (leaderboard.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No scores yet. Be the first!</div>';
-                return;
+        function stopRushTimer() {
+            if (rushTimerInterval) {
+                clearInterval(rushTimerInterval);
+                rushTimerInterval = null;
             }
+            document.getElementById('rushTimer').classList.add('hidden');
+        }
+
+        function showResults(data) {
+            const modal = document.getElementById('resultsModal');
+            const title = document.getElementById('resultsTitle');
+            const resultsList = document.getElementById('resultsList');
             
-            container.innerHTML = leaderboard.map((entry, index) => `
-                <div class="leaderboard-entry">
-                    <span class="leaderboard-rank">#${index + 1}</span>
-                    <span class="leaderboard-name">${entry.name}</span>
-                    <span class="leaderboard-score">${entry.score.toFixed(2)}pts</span>
-                    <span class="leaderboard-time">${entry.time.toFixed(1)}s</span>
-                </div>
-            `).join('');
+            title.textContent = `🎉 ${data.mode.charAt(0).toUpperCase() + data.mode.slice(1)} Mode Results`;
+            
+            resultsList.innerHTML = data.results.map((result, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                return `
+                    <div class="result-item">
+                        <span class="result-rank">${medal} #${index + 1}</span>
+                        <span class="result-name">${result.name}</span>
+                        <span class="result-score">
+                            ${data.mode === 'normal' 
+                                ? `${result.score.toFixed(2)}pts (${result.time.toFixed(1)}s)`
+                                : `${result.bestScore.toFixed(2)}pts (${result.attemptCount} attempts)`
+                            }
+                        </span>
+                    </div>
+                `;
+            }).join('');
+            
+            modal.style.display = 'block';
+        }
+
+        function closeResults() {
+            document.getElementById('resultsModal').style.display = 'none';
+            leaveGame();
         }
 
         function enableInputs() {
@@ -787,10 +1024,6 @@
                 input.disabled = false;
                 input.style.opacity = '1';
             });
-            
-            const checkButton = document.querySelector('button[onclick="checkAlignment()"]');
-            checkButton.disabled = false;
-            checkButton.style.opacity = '1';
         }
 
         function disableInputs() {
@@ -800,25 +1033,37 @@
                 input.disabled = true;
                 input.style.opacity = '0.5';
             });
-            
-            const checkButton = document.querySelector('button[onclick="checkAlignment()"]');
-            checkButton.disabled = true;
-            checkButton.style.opacity = '0.5';
         }
 
-        // Handle Enter key in name modal
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && document.getElementById('nameModal').style.display === 'block') {
-                submitScore();
+        async function displayLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const leaderboard = await response.json();
+                const container = document.getElementById('leaderboardList');
+                
+                if (leaderboard.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No scores yet. Be the first!</div>';
+                    return;
+                }
+                
+                container.innerHTML = leaderboard.map((entry, index) => `
+                    <div class="leaderboard-entry">
+                        <span class="leaderboard-rank">#${index + 1}</span>
+                        <span class="leaderboard-name">${entry.name}</span>
+                        <span class="leaderboard-score">${entry.score.toFixed(2)}pts</span>
+                        <span class="leaderboard-time">${entry.time.toFixed(1)}s</span>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
             }
-        });
+        }
 
-        // Initialize the game when the page loads
+        // Initialize when page loads
         window.addEventListener('load', () => {
             setTimeout(async () => {
-                initGame();
                 await displayLeaderboard();
-            }, 100); // Small delay to ensure canvas is properly sized
+            }, 100);
         });
 
         // Handle window resize
