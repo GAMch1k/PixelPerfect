@@ -193,6 +193,13 @@ io.on('connection', (socket) => {
         startRect: room.startRect,
         mode: 'normal'
       })
+      
+      // Set 3-minute timeout for normal mode
+      setTimeout(() => {
+        if (room.status === 'playing') {
+          endNormalGame(room)
+        }
+      }, 180000) // 3 minutes
     } else if (mode === 'rush') {
       if (room.status === 'waiting' && room.players.size >= 2) {
         // Start rush mode game
@@ -300,9 +307,11 @@ io.on('connection', (socket) => {
 function endNormalGame(room) {
   room.status = 'finished'
   
-  // Calculate winners
+  // Calculate winners - only include players who have submitted
   const players = Array.from(room.players.values())
-  const results = players.map(player => {
+  const playersWithSubmissions = players.filter(player => player.submissions.length > 0)
+  
+  const results = playersWithSubmissions.map(player => {
     const bestSubmission = player.submissions.reduce((best, current) => 
       current.score > best.score || (current.score === best.score && current.time < best.time) ? current : best
     )
